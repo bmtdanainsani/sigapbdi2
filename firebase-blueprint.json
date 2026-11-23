@@ -1,0 +1,278 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Profil staf, peran operasional, cabang, dan data kredensial akses BMT Dana Insani.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "uid": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 150 },
+        "email": { "type": "string", "format": "email", "maxLength": 200 },
+        "role": {
+          "type": "string",
+          "enum": ["super_admin", "admin", "marketing", "branch_manager", "branch_admin", "management", "risk_management"]
+        },
+        "roleTitle": { "type": "string", "maxLength": 150 },
+        "department": { "type": "string", "maxLength": 150 },
+        "branch": { "type": "string", "maxLength": 120 },
+        "avatarUrl": { "type": "string", "maxLength": 2048 },
+        "phone": { "type": "string", "maxLength": 40 },
+        "createdAt": { "type": "string", "maxLength": 64 },
+        "status": { "type": "string", "enum": ["active", "inactive"] },
+        "username": { "type": "string", "maxLength": 100 },
+        "initialUsername": { "type": "string", "maxLength": 100 },
+        "password": { "type": "string", "maxLength": 200 },
+        "initialPassword": { "type": "string", "maxLength": 200 },
+        "lastModifiedCredentialsAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "name", "email", "role", "branch", "username", "password", "status"]
+    },
+    "SurveyApplication": {
+      "title": "SurveyApplication",
+      "description": "Berkas permohonan survey pembiayaan, profil nasabah, hasil verifikasi 5C, analisa keuangan DSR, dan risalah komite.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "applicationNumber": { "type": "string", "maxLength": 64 },
+        "ownerUid": { "type": "string", "maxLength": 128 },
+        "namaDebitur": { "type": "string", "maxLength": 150 },
+        "nik": { "type": "string", "maxLength": 32 },
+        "noKk": { "type": "string", "maxLength": 32 },
+        "noHp": { "type": "string", "maxLength": 32 },
+        "alamatKtp": { "type": "string", "maxLength": 500 },
+        "alamatDomisili": { "type": "string", "maxLength": 500 },
+        "jenisUsaha": { "type": "string", "maxLength": 200 },
+        "lamaUsahaBulan": { "type": "number" },
+        "statusPernikahan": { "type": "string", "enum": ["Menikah", "Belum Menikah", "Cerai"] },
+        "namaPasangan": { "type": "string", "maxLength": 150 },
+        "marketingId": { "type": "string", "maxLength": 128 },
+        "marketingName": { "type": "string", "maxLength": 150 },
+        "cabang": { "type": "string", "maxLength": 120 },
+        "createdAt": { "type": "string", "maxLength": 64 },
+        "updatedAt": { "type": "string", "maxLength": 64 },
+        "status": {
+          "type": "string",
+          "enum": ["draft", "submitted", "under_review", "approved", "rejected", "conditional_approval"]
+        },
+        "checklistAnswers": { "type": "array" },
+        "financial": { "type": "object" },
+        "collateral": { "type": "object" },
+        "collaterals": { "type": "array" },
+        "evidence": { "type": "object" },
+        "fraudEvaluation": { "type": "object" },
+        "scoring": { "type": "object" },
+        "branchValidation": { "type": "object" },
+        "analystCheck": { "type": "object" },
+        "managementNote": { "type": "object" },
+        "adminReview": { "type": "object" },
+        "riskVerification": { "type": "object" },
+        "disbursementInstruction": { "type": "object" },
+        "disbursementExecution": { "type": "object" }
+      },
+      "required": ["id", "applicationNumber", "namaDebitur", "nik", "cabang", "status", "createdAt", "updatedAt"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Catatan jejak aktivitas dan riwayat perubahan status berkas dalam sistem.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerUid": { "type": "string", "maxLength": 128 },
+        "applicationId": { "type": "string", "maxLength": 128 },
+        "applicationNumber": { "type": "string", "maxLength": 64 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "userName": { "type": "string", "maxLength": 150 },
+        "userRole": { "type": "string", "maxLength": 64 },
+        "action": { "type": "string", "maxLength": 120 },
+        "details": { "type": "string", "maxLength": 2000 },
+        "timestamp": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "timestamp", "userId", "userName", "userRole", "action", "details"]
+    },
+    "AppNotification": {
+      "title": "AppNotification",
+      "description": "Pemberitahuan real-time untuk koordinasi antar analis, kepala cabang, dan komite.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "ownerUid": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 200 },
+        "message": { "type": "string", "maxLength": 1000 },
+        "type": {
+          "type": "string",
+          "enum": [
+            "survey_submitted",
+            "survey_reviewed",
+            "fraud_alert",
+            "user_created",
+            "bm_validation",
+            "bm_revision",
+            "analyst_revision",
+            "committee_scheduled",
+            "management_attention",
+            "risk_verification",
+            "disbursement_order",
+            "disbursement_submitted",
+            "disbursement_validated",
+            "disbursement_revision"
+          ]
+        },
+        "applicationId": { "type": "string", "maxLength": 128 },
+        "applicationNumber": { "type": "string", "maxLength": 64 },
+        "targetRole": { "type": "string", "maxLength": 64 },
+        "targetBranch": { "type": "string", "maxLength": 120 },
+        "timestamp": { "type": "string", "maxLength": 64 },
+        "read": { "type": "boolean" }
+      },
+      "required": ["id", "title", "message", "timestamp", "type", "read"]
+    },
+    "ScoringFormulaConfig": {
+      "title": "ScoringFormulaConfig",
+      "description": "Konfigurasi rumus perhitungan bobot 5C, ambang batas grade A-D, formula DSR, penalti fraud, dan parameter agunan BMT.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "policyName": { "type": "string", "maxLength": 200 },
+        "policyVersion": { "type": "string", "maxLength": 64 },
+        "updatedAt": { "type": "string", "maxLength": 64 },
+        "updatedBy": { "type": "string", "maxLength": 150 },
+        "weights5C": { "type": "object" },
+        "gradeThresholds": { "type": "object" },
+        "financialSettings": { "type": "object" },
+        "fraudSettings": { "type": "object" },
+        "collateralSettings": { "type": "object" },
+        "notes": { "type": "string", "maxLength": 1000 }
+      },
+      "required": ["id", "policyName", "policyVersion", "updatedAt", "updatedBy", "weights5C", "gradeThresholds", "financialSettings", "fraudSettings", "collateralSettings"]
+    },
+    "AppSettings": {
+      "title": "AppSettings",
+      "description": "Pengaturan identitas aplikasi, nama BMT, tema warna, format kop surat, batasan operasional, dan parameter sistem.",
+      "type": "object",
+      "properties": {
+        "appName": { "type": "string", "maxLength": 150 },
+        "appSubtitle": { "type": "string", "maxLength": 200 },
+        "institutionName": { "type": "string", "maxLength": 200 },
+        "institutionTagline": { "type": "string", "maxLength": 300 },
+        "institutionLegalNumber": { "type": "string", "maxLength": 200 },
+        "institutionAddress": { "type": "string", "maxLength": 400 },
+        "institutionPhone": { "type": "string", "maxLength": 64 },
+        "institutionEmail": { "type": "string", "maxLength": 150 },
+        "institutionWebsite": { "type": "string", "maxLength": 200 },
+        "colorTheme": { "type": "string", "enum": ["emerald", "teal", "navy", "amber", "indigo", "slate"] },
+        "defaultMode": { "type": "string", "enum": ["dark", "light"] },
+        "brandBadgeText": { "type": "string", "maxLength": 100 },
+        "showWatermarkOnPrint": { "type": "boolean" },
+        "printHeaderTitle": { "type": "string", "maxLength": 200 },
+        "printHeaderSubtitle": { "type": "string", "maxLength": 250 },
+        "printLegalFooterNotice": { "type": "string", "maxLength": 500 },
+        "defaultCityDecision": { "type": "string", "maxLength": 120 },
+        "defaultMarginRatePa": { "type": "number" },
+        "maxLoanPlafon": { "type": "number" },
+        "maxTenorMonths": { "type": "number" },
+        "minNikKkDigits": { "type": "number" },
+        "minPhoneDigits": { "type": "number" },
+        "requireSpouseKtpWhenMarried": { "type": "boolean" },
+        "requireParentKtpWhenSingle": { "type": "boolean" },
+        "maxCollateralsCount": { "type": "number" },
+        "officeAoCatalog": { "type": "array" },
+        "updatedAt": { "type": "string", "maxLength": 64 },
+        "updatedBy": { "type": "string", "maxLength": 150 }
+      },
+      "required": ["appName", "institutionName", "colorTheme"]
+    },
+    "WorkspaceMeta": {
+      "title": "WorkspaceMeta",
+      "description": "Metadata pemilik utama workspace Cloud Firestore untuk otorisasi admin lintas perangkat.",
+      "type": "object",
+      "properties": {
+        "ownerUid": { "type": "string", "maxLength": 128 },
+        "ownerEmail": { "type": "string", "format": "email", "maxLength": 200 },
+        "claimedAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["ownerUid", "ownerEmail", "claimedAt"]
+    },
+    "AdminEntry": {
+      "title": "AdminEntry",
+      "description": "Daftar UID administrator terverifikasi yang memiliki hak akses penuh pengelolaan BMT.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "format": "email", "maxLength": 200 },
+        "grantedAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["uid", "email", "grantedAt"]
+    },
+    "StaffAccess": {
+      "title": "StaffAccess",
+      "description": "Matriks otorisasi email staf (non-PII) untuk sinkronisasi operasional antar perangkat dan peran.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email", "maxLength": 200 },
+        "role": {
+          "type": "string",
+          "enum": ["super_admin", "admin", "marketing", "branch_manager", "branch_admin", "management", "risk_management"]
+        },
+        "branch": { "type": "string", "maxLength": 120 },
+        "active": { "type": "boolean" },
+        "updatedAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["email", "role", "branch", "active", "updatedAt"]
+    },
+    "ChecklistConfig": {
+      "title": "ChecklistConfig",
+      "description": "Katalog butir checklist survey 5C yang disinkronkan secara cloud antar perangkat.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "questions": { "type": "array" },
+        "updatedAt": { "type": "string", "maxLength": 64 },
+        "updatedBy": { "type": "string", "maxLength": 150 }
+      },
+      "required": ["id", "questions", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Koleksi data master akun staf, peran operasional, dan kredensial login."
+    },
+    "/applications/{applicationId}": {
+      "schema": "SurveyApplication",
+      "description": "Koleksi berkas pengajuan survey, verifikasi 5C, dan keputusan komite kredit."
+    },
+    "/auditLogs/{logId}": {
+      "schema": "AuditLog",
+      "description": "Koleksi jejak audit log dan aktivitas operasional seluruh sistem."
+    },
+    "/notifications/{notificationId}": {
+      "schema": "AppNotification",
+      "description": "Koleksi notifikasi operasional dan atensi cabang."
+    },
+    "/scoringConfig/{configId}": {
+      "schema": "ScoringFormulaConfig",
+      "description": "Koleksi konfigurasi rumus scoring kredit dan mitigasi risiko operasional lembaga."
+    },
+    "/settings/{settingId}": {
+      "schema": "AppSettings",
+      "description": "Koleksi konfigurasi identitas aplikasi, branding lembaga, tema warna, dan kebijakan operasional."
+    },
+    "/workspaceMeta/{metaId}": {
+      "schema": "WorkspaceMeta",
+      "description": "Metadata pemilik utama workspace Cloud Firestore."
+    },
+    "/admins/{uid}": {
+      "schema": "AdminEntry",
+      "description": "Registrasi UID administrator terverifikasi."
+    },
+    "/staffAccess/{staffEmail}": {
+      "schema": "StaffAccess",
+      "description": "Registrasi akses email staf aktif untuk kolaborasi lintas gadget."
+    },
+    "/checklistConfig/{configId}": {
+      "schema": "ChecklistConfig",
+      "description": "Konfigurasi katalog checklist survey lapangan 5C."
+    }
+  }
+}

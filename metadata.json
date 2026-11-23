@@ -1,0 +1,8 @@
+{
+  "name": "Remix Aplikasi Credit Scoring \u0026 Survey Lapangan V.1",
+  "description": "Sistem penilaian kapasitas calon debitur, credit scoring 5C otomatis, dasbor analitik profil risiko, notifikasi real-time, log audit, dan ekspor laporan PDF/Excel.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

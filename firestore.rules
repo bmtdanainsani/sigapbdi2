@@ -1,0 +1,458 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper primitives
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidEmailDocId(id) {
+      return id is string && id.size() > 0 && id.size() <= 200 && id.matches('^[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,}$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isEmailVerified() && (
+        request.auth.token.email == 'bmtdanainsani@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isStaff() {
+      return isEmailVerified() && (
+        isAdmin() ||
+        (
+          request.auth.token.email != null &&
+          exists(/databases/$(database)/documents/staffAccess/$(request.auth.token.email.lower())) &&
+          get(/databases/$(database)/documents/staffAccess/$(request.auth.token.email.lower())).data.active == true
+        )
+      );
+    }
+
+    function isValidWorkspaceMeta(data) {
+      return data.keys().hasAll(['ownerUid', 'ownerEmail', 'claimedAt']) &&
+        data.keys().hasOnly(['ownerUid', 'ownerEmail', 'claimedAt']) &&
+        data.ownerUid is string && data.ownerUid.size() > 0 && data.ownerUid.size() <= 128 &&
+        data.ownerEmail is string && data.ownerEmail.size() > 0 && data.ownerEmail.size() <= 200 &&
+        data.claimedAt is string && data.claimedAt.size() <= 64;
+    }
+
+    function isValidAdminDoc(data) {
+      return data.keys().hasAll(['uid', 'email', 'grantedAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'grantedAt']) &&
+        data.uid is string && data.uid.size() > 0 && data.uid.size() <= 128 &&
+        data.email is string && data.email.size() > 0 && data.email.size() <= 200 &&
+        data.grantedAt is string && data.grantedAt.size() <= 64;
+    }
+
+    function isValidStaffAccess(data) {
+      return data.keys().hasAll(['email', 'role', 'branch', 'active', 'updatedAt']) &&
+        data.keys().hasOnly(['email', 'role', 'branch', 'active', 'updatedAt']) &&
+        data.email is string && data.email.size() > 0 && data.email.size() <= 200 &&
+        data.role in ['super_admin', 'admin', 'marketing', 'branch_manager', 'branch_admin', 'management', 'risk_management'] &&
+        data.branch is string && data.branch.size() <= 120 &&
+        data.active is bool &&
+        data.updatedAt is string && data.updatedAt.size() <= 64;
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['id', 'name', 'email', 'role', 'branch', 'username', 'password', 'status']) &&
+        data.keys().hasOnly([
+          'id', 'uid', 'name', 'email', 'role', 'roleTitle', 'department', 'branch',
+          'avatarUrl', 'phone', 'createdAt', 'status', 'username', 'initialUsername',
+          'password', 'initialPassword', 'lastModifiedCredentialsAt'
+        ]) &&
+        data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 150 &&
+        data.email is string && data.email.size() > 0 && data.email.size() <= 200 &&
+        data.role in ['super_admin', 'admin', 'marketing', 'branch_manager', 'branch_admin', 'management', 'risk_management'] &&
+        data.branch is string && data.branch.size() <= 120 &&
+        data.username is string && data.username.size() <= 100 &&
+        data.password is string && data.password.size() <= 200 &&
+        data.status in ['active', 'inactive'] &&
+        (!('uid' in data) || (data.uid is string && data.uid.size() <= 128)) &&
+        (!('roleTitle' in data) || (data.roleTitle is string && data.roleTitle.size() <= 150)) &&
+        (!('department' in data) || (data.department is string && data.department.size() <= 150)) &&
+        (!('avatarUrl' in data) || (data.avatarUrl is string && data.avatarUrl.size() <= 2048)) &&
+        (!('phone' in data) || (data.phone is string && data.phone.size() <= 40)) &&
+        (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 64)) &&
+        (!('initialUsername' in data) || (data.initialUsername is string && data.initialUsername.size() <= 100)) &&
+        (!('initialPassword' in data) || (data.initialPassword is string && data.initialPassword.size() <= 200)) &&
+        (!('lastModifiedCredentialsAt' in data) || (data.lastModifiedCredentialsAt is string && data.lastModifiedCredentialsAt.size() <= 64));
+    }
+
+    function isValidApplication(data) {
+      return data.keys().hasAll([
+          'id', 'applicationNumber', 'namaDebitur', 'nik', 'noKk', 'noHp',
+          'alamatKtp', 'alamatDomisili', 'jenisUsaha', 'lamaUsahaBulan',
+          'statusPernikahan', 'marketingId', 'marketingName', 'cabang',
+          'createdAt', 'updatedAt', 'status', 'checklistAnswers', 'financial',
+          'collateral', 'evidence', 'fraudEvaluation', 'scoring'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'applicationNumber', 'ownerUid', 'namaDebitur', 'nik', 'noKk', 'noHp',
+          'alamatKtp', 'alamatDomisili', 'jenisUsaha', 'lamaUsahaBulan',
+          'statusPernikahan', 'namaPasangan', 'marketingId', 'marketingName', 'cabang',
+          'createdAt', 'updatedAt', 'status', 'branchValidation', 'analystCheck',
+          'managementNote', 'checklistAnswers', 'financial', 'collateral', 'collaterals',
+          'evidence', 'fraudEvaluation', 'scoring', 'adminReview', 'riskVerification',
+          'disbursementInstruction', 'disbursementExecution'
+        ]) &&
+        data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+        data.applicationNumber is string && data.applicationNumber.size() > 0 && data.applicationNumber.size() <= 64 &&
+        data.namaDebitur is string && data.namaDebitur.size() > 0 && data.namaDebitur.size() <= 200 &&
+        data.nik is string && data.nik.size() <= 32 &&
+        data.noKk is string && data.noKk.size() <= 32 &&
+        data.noHp is string && data.noHp.size() <= 32 &&
+        data.alamatKtp is string && data.alamatKtp.size() <= 1000 &&
+        data.alamatDomisili is string && data.alamatDomisili.size() <= 1000 &&
+        data.jenisUsaha is string && data.jenisUsaha.size() <= 300 &&
+        data.lamaUsahaBulan is number &&
+        data.statusPernikahan in ['Menikah', 'Belum Menikah', 'Cerai'] &&
+        data.marketingId is string && data.marketingId.size() <= 128 &&
+        data.marketingName is string && data.marketingName.size() <= 150 &&
+        data.cabang is string && data.cabang.size() <= 120 &&
+        data.createdAt is string && data.createdAt.size() <= 64 &&
+        data.updatedAt is string && data.updatedAt.size() <= 64 &&
+        data.status in ['draft', 'submitted', 'under_review', 'approved', 'rejected', 'conditional_approval'] &&
+        data.checklistAnswers is list && data.checklistAnswers.size() <= 500 &&
+        data.financial is map &&
+        data.collateral is map &&
+        data.evidence is map &&
+        data.fraudEvaluation is map &&
+        data.scoring is map &&
+        (!('ownerUid' in data) || (data.ownerUid is string && data.ownerUid.size() <= 128)) &&
+        (!('namaPasangan' in data) || (data.namaPasangan is string && data.namaPasangan.size() <= 200)) &&
+        (!('collaterals' in data) || (data.collaterals is list && data.collaterals.size() <= 20));
+    }
+
+    function isValidAuditLog(data) {
+      return data.keys().hasAll(['id', 'userId', 'userName', 'userRole', 'action', 'details', 'timestamp']) &&
+        data.keys().hasOnly([
+          'id', 'ownerUid', 'applicationId', 'applicationNumber',
+          'userId', 'userName', 'userRole', 'action', 'details', 'timestamp'
+        ]) &&
+        data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+        data.userId is string && data.userId.size() <= 128 &&
+        data.userName is string && data.userName.size() <= 150 &&
+        data.userRole is string && data.userRole.size() <= 64 &&
+        data.action is string && data.action.size() <= 120 &&
+        data.details is string && data.details.size() <= 4000 &&
+        data.timestamp is string && data.timestamp.size() <= 64 &&
+        (!('ownerUid' in data) || (data.ownerUid is string && data.ownerUid.size() <= 128)) &&
+        (!('applicationId' in data) || (data.applicationId is string && data.applicationId.size() <= 128)) &&
+        (!('applicationNumber' in data) || (data.applicationNumber is string && data.applicationNumber.size() <= 64));
+    }
+
+    function isValidNotification(data) {
+      return data.keys().hasAll(['id', 'title', 'message', 'type', 'timestamp', 'read']) &&
+        data.keys().hasOnly([
+          'id', 'ownerUid', 'title', 'message', 'type', 'applicationId',
+          'applicationNumber', 'targetRole', 'targetBranch', 'timestamp', 'read'
+        ]) &&
+        data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+        data.title is string && data.title.size() <= 200 &&
+        data.message is string && data.message.size() <= 1000 &&
+        data.type is string && data.type.size() <= 64 &&
+        data.timestamp is string && data.timestamp.size() <= 64 &&
+        data.read is bool &&
+        (!('ownerUid' in data) || (data.ownerUid is string && data.ownerUid.size() <= 128)) &&
+        (!('applicationId' in data) || (data.applicationId is string && data.applicationId.size() <= 128)) &&
+        (!('applicationNumber' in data) || (data.applicationNumber is string && data.applicationNumber.size() <= 64)) &&
+        (!('targetRole' in data) || (data.targetRole is string && data.targetRole.size() <= 64)) &&
+        (!('targetBranch' in data) || (data.targetBranch is string && data.targetBranch.size() <= 120));
+    }
+
+    function isValidScoringConfig(data) {
+      return data.keys().hasAll([
+          'id', 'policyName', 'policyVersion', 'updatedAt', 'updatedBy',
+          'weights5C', 'gradeThresholds', 'financialSettings', 'fraudSettings', 'collateralSettings'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'policyName', 'policyVersion', 'updatedAt', 'updatedBy',
+          'weights5C', 'gradeThresholds', 'financialSettings', 'fraudSettings', 'collateralSettings', 'notes'
+        ]) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.policyName is string && data.policyName.size() <= 200 &&
+        data.policyVersion is string && data.policyVersion.size() <= 64 &&
+        data.updatedAt is string && data.updatedAt.size() <= 64 &&
+        data.updatedBy is string && data.updatedBy.size() <= 150 &&
+        data.weights5C is map &&
+        data.gradeThresholds is map &&
+        data.financialSettings is map &&
+        data.fraudSettings is map &&
+        data.collateralSettings is map &&
+        (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000));
+    }
+
+    function isValidAppSettings(data) {
+      return data.keys().hasAll(['appName', 'institutionName', 'colorTheme']) &&
+        data.keys().hasOnly([
+          'appName', 'appSubtitle', 'institutionName', 'institutionTagline',
+          'institutionLegalNumber', 'institutionAddress', 'institutionPhone',
+          'institutionEmail', 'institutionWebsite', 'colorTheme', 'defaultMode',
+          'brandBadgeText', 'showWatermarkOnPrint', 'printHeaderTitle',
+          'printHeaderSubtitle', 'printLegalFooterNotice', 'defaultCityDecision',
+          'defaultMarginRatePa', 'maxLoanPlafon', 'maxTenorMonths', 'minNikKkDigits',
+          'minPhoneDigits', 'requireSpouseKtpWhenMarried', 'requireParentKtpWhenSingle',
+          'maxCollateralsCount', 'officeAoCatalog', 'updatedAt', 'updatedBy'
+        ]) &&
+        data.appName is string && data.appName.size() <= 150 &&
+        data.institutionName is string && data.institutionName.size() <= 200 &&
+        data.colorTheme in ['emerald', 'teal', 'navy', 'amber', 'indigo', 'slate'] &&
+        (!('officeAoCatalog' in data) || (data.officeAoCatalog is list && data.officeAoCatalog.size() <= 100));
+    }
+
+    function isValidChecklistConfig(data) {
+      return data.keys().hasAll(['id', 'questions', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'questions', 'updatedAt', 'updatedBy']) &&
+        data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+        data.questions is list && data.questions.size() <= 500 &&
+        (data.questions.size() == 0 || data.questions[0] is map) &&
+        data.updatedAt is string && data.updatedAt.size() <= 64 &&
+        (!('updatedBy' in data) || (data.updatedBy is string && data.updatedBy.size() <= 150));
+    }
+
+    // Connection test document (single get only)
+    match /test/{docId} {
+      allow get: if isValidId(docId);
+      allow list, write: if false;
+    }
+
+    // Workspace owner bootstrap (claimed once by first verified user)
+    match /workspaceMeta/{metaId} {
+      allow get: if isEmailVerified() && isValidId(metaId);
+      allow list: if false;
+      allow create: if isEmailVerified() && isValidId(metaId) && metaId == 'owner' &&
+        !exists(/databases/$(database)/documents/workspaceMeta/owner) &&
+        isValidWorkspaceMeta(incoming()) &&
+        incoming().ownerUid == request.auth.uid &&
+        incoming().ownerEmail == request.auth.token.email;
+      allow update, delete: if false;
+    }
+
+    // Admin registry
+    match /admins/{uid} {
+      allow get: if isEmailVerified() && isValidId(uid) && (request.auth.uid == uid || isAdmin());
+      allow list: if false;
+      allow create: if isEmailVerified() && isValidId(uid) && isValidAdminDoc(incoming()) && (
+        isAdmin() ||
+        (
+          request.auth.uid == uid &&
+          incoming().uid == request.auth.uid &&
+          incoming().email == request.auth.token.email &&
+          (
+            request.auth.token.email == 'bmtdanainsani@gmail.com' ||
+            (
+              existsAfter(/databases/$(database)/documents/workspaceMeta/owner) &&
+              getAfter(/databases/$(database)/documents/workspaceMeta/owner).data.ownerUid == request.auth.uid
+            ) ||
+            (
+              request.auth.token.email != null &&
+              exists(/databases/$(database)/documents/staffAccess/$(request.auth.token.email.lower())) &&
+              get(/databases/$(database)/documents/staffAccess/$(request.auth.token.email.lower())).data.active == true &&
+              get(/databases/$(database)/documents/staffAccess/$(request.auth.token.email.lower())).data.role == 'super_admin'
+            )
+          )
+        )
+      );
+      allow update, delete: if false;
+    }
+
+    // Non-PII staff email authorization lookup
+    match /staffAccess/{staffEmail} {
+      allow get: if isEmailVerified() && isValidEmailDocId(staffEmail) && (
+        isAdmin() ||
+        (request.auth.token.email != null && staffEmail == request.auth.token.email.lower())
+      );
+      allow list: if isAdmin();
+      allow create, update: if isAdmin() && isValidEmailDocId(staffEmail) && isValidStaffAccess(incoming());
+      allow delete: if isAdmin() && isValidEmailDocId(staffEmail);
+    }
+
+    // Users and Credential Management
+    match /users/{userId} {
+      allow get: if isEmailVerified() && isValidId(userId) && (
+        isAdmin() ||
+        resource.data.email == request.auth.token.email ||
+        resource.data.uid == request.auth.uid
+      );
+      allow list: if isEmailVerified() && (
+        isAdmin() ||
+        resource.data.email == request.auth.token.email ||
+        resource.data.uid == request.auth.uid
+      );
+      allow create: if isEmailVerified() && isValidId(userId) && isValidUser(incoming()) && (
+        isAdmin() ||
+        (
+          userId == ('usr-' + request.auth.uid) &&
+          incoming().role == 'marketing' &&
+          incoming().email == request.auth.token.email &&
+          incoming().uid == request.auth.uid
+        )
+      );
+      allow update: if isEmailVerified() && isValidId(userId) && isValidUser(incoming()) && (
+        isAdmin() ||
+        (
+          existing().email == request.auth.token.email &&
+          incoming().email == existing().email &&
+          incoming().role == existing().role &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['username', 'password', 'lastModifiedCredentialsAt', 'avatarUrl'])
+        )
+      );
+      allow delete: if isAdmin() && isValidId(userId);
+    }
+
+    // Credit Scoring Survey Applications
+    match /applications/{applicationId} {
+      allow get: if isEmailVerified() && isValidId(applicationId) && (
+        isAdmin() ||
+        isStaff() ||
+        resource.data.ownerUid == request.auth.uid
+      );
+      allow list: if isEmailVerified() && (
+        isAdmin() ||
+        isStaff() ||
+        resource.data.ownerUid == request.auth.uid
+      );
+      allow create: if isEmailVerified() && isValidId(applicationId) && isValidApplication(incoming()) && (
+        isAdmin() ||
+        isStaff() ||
+        incoming().ownerUid == request.auth.uid
+      );
+      allow update: if isEmailVerified() && isValidId(applicationId) && isValidApplication(incoming()) && (
+        isAdmin() ||
+        (
+          isStaff() &&
+          existing().status != 'approved' &&
+          existing().status != 'rejected' &&
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'namaDebitur', 'nik', 'noKk', 'noHp', 'alamatKtp', 'alamatDomisili',
+            'jenisUsaha', 'lamaUsahaBulan', 'statusPernikahan', 'namaPasangan',
+            'checklistAnswers', 'financial', 'collateral', 'collaterals',
+            'evidence', 'fraudEvaluation', 'scoring', 'status', 'updatedAt',
+            'branchValidation', 'analystCheck', 'managementNote', 'adminReview',
+            'riskVerification', 'disbursementInstruction'
+          ])
+        ) ||
+        (
+          isStaff() &&
+          existing().status in ['approved', 'conditional_approval'] &&
+          incoming().status == existing().status &&
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'riskVerification', 'disbursementInstruction', 'disbursementExecution',
+            'managementNote', 'updatedAt'
+          ])
+        ) ||
+        (
+          existing().ownerUid == request.auth.uid &&
+          incoming().ownerUid == existing().ownerUid &&
+          existing().status != 'approved' &&
+          existing().status != 'rejected' &&
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'namaDebitur', 'nik', 'noKk', 'noHp', 'alamatKtp', 'alamatDomisili',
+            'jenisUsaha', 'lamaUsahaBulan', 'statusPernikahan', 'namaPasangan',
+            'checklistAnswers', 'financial', 'collateral', 'collaterals',
+            'evidence', 'fraudEvaluation', 'scoring', 'updatedAt'
+          ])
+        )
+      );
+      allow delete: if isAdmin() && isValidId(applicationId);
+    }
+
+    // Activity Audit Logs (append-only)
+    match /auditLogs/{logId} {
+      allow get: if isEmailVerified() && isValidId(logId) && (
+        isAdmin() ||
+        isStaff() ||
+        resource.data.ownerUid == request.auth.uid
+      );
+      allow list: if isEmailVerified() && (
+        isAdmin() ||
+        isStaff() ||
+        resource.data.ownerUid == request.auth.uid
+      );
+      allow create: if isEmailVerified() && isValidId(logId) && isValidAuditLog(incoming()) && (
+        isAdmin() ||
+        isStaff() ||
+        incoming().ownerUid == request.auth.uid
+      );
+      allow update, delete: if false;
+    }
+
+    // Operational Notifications
+    match /notifications/{notificationId} {
+      allow get: if isEmailVerified() && isValidId(notificationId) && (
+        isAdmin() ||
+        isStaff() ||
+        resource.data.ownerUid == request.auth.uid ||
+        resource.data.targetRole == 'all'
+      );
+      allow list: if isEmailVerified() && (
+        isAdmin() ||
+        isStaff() ||
+        resource.data.ownerUid == request.auth.uid ||
+        resource.data.targetRole == 'all'
+      );
+      allow create: if isEmailVerified() && isValidId(notificationId) && isValidNotification(incoming()) && (
+        isAdmin() ||
+        isStaff() ||
+        incoming().ownerUid == request.auth.uid
+      );
+      allow update: if isEmailVerified() && isValidId(notificationId) && isValidNotification(incoming()) && (
+        isAdmin() ||
+        (
+          (isStaff() || existing().ownerUid == request.auth.uid) &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['read'])
+        )
+      );
+      allow delete: if isAdmin() && isValidId(notificationId);
+    }
+
+    // Scoring & Risk Engine Formula Configuration
+    match /scoringConfig/{configId} {
+      allow get: if isEmailVerified() && isValidId(configId);
+      allow list: if false;
+      allow create, update: if isAdmin() && isValidId(configId) && isValidScoringConfig(incoming());
+      allow delete: if false;
+    }
+
+    // Application & Institution Settings
+    match /settings/{settingId} {
+      allow get: if isEmailVerified() && isValidId(settingId);
+      allow list: if false;
+      allow create, update: if isAdmin() && isValidId(settingId) && isValidAppSettings(incoming());
+      allow delete: if false;
+    }
+
+    // Survey Checklist Questions Catalog
+    match /checklistConfig/{configId} {
+      allow get: if isEmailVerified() && isValidId(configId);
+      allow list: if false;
+      allow create, update: if isAdmin() && isValidId(configId) && isValidChecklistConfig(incoming());
+      allow delete: if false;
+    }
+  }
+}
